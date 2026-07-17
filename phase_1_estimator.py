@@ -206,26 +206,32 @@ if __name__ == '__main__':
         reader = csv.DictReader(f)
         row = next(reader)
         candidates = json.loads(row['candidate_policies_json'])
-        pol = parse_policy(candidates[0]['policy_text'])
-        print(json.dumps(pol, indent=2))
-
-        print("\nEvaluating probes for Candidate 0...")
         probes = json.loads(row['probe_bank_json'])
         response_matrix = json.loads(row['response_matrix_json'])
-        cid = candidates[0]['candidate_id']
 
-        correct = 0
-        for probe in probes:
-            predicted = predict_action(probe, pol)
-            actual = response_matrix[cid][probe['probe_id']]
+        from tqdm import tqdm
+        print(f"Evaluating {len(candidates)} candidates...")
 
-            if predicted == actual:
-                correct += 1
-            else:
-                print(f"MISMATCH: pred={predicted} actual={actual}")
-                caps = find_capabilities(probe['request'], list(pol['capability_owners'].keys()))
-                cond = detect_condition(probe['request'])
-                print(f"  condition={cond} | caps={caps}")
-                print(f"  Request: {probe['request'][:120]}")
+        total_correct = 0
+        total_probes = 0
 
-        print(f"\nCandidate 0 Accuracy: {correct}/{len(probes)} = {correct/len(probes):.2%}")
+        for idx, cand in enumerate(tqdm(candidates, desc="Evaluating Candidates")):
+            pol = parse_policy(cand['policy_text'])
+            cid = cand['candidate_id']
+
+            correct = 0
+            for probe in probes:
+                predicted = predict_action(probe, pol)
+                actual = response_matrix[cid][probe['probe_id']]
+
+                if predicted == actual:
+                    correct += 1
+
+            cand_accuracy = correct / len(probes)
+            tqdm.write(f"Candidate {idx} ({cid}) Accuracy: {correct}/{len(probes)} = {cand_accuracy:.2%}")
+
+            total_correct += correct
+            total_probes += len(probes)
+
+        overall_accuracy = total_correct / total_probes
+        print(f"\nOverall Accuracy for Episode: {total_correct}/{total_probes} = {overall_accuracy:.2%}")

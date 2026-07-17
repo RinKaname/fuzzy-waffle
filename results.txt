@@ -1,0 +1,7 @@
+Evaluating 10 candidates...
+Evaluating Candidates:   0%|          | 0/10 [00:00<?, ?it/s]Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s][A
+Loading weights:  49%|████▊     | 98/202 [00:00<00:00, 974.95it/s][ALoading weights: 100%|██████████| 202/202 [00:00<00:00, 1170.34it/s]
+[transformers] Failed to determine 'entailment' label id from the label2id mapping in the model config. Setting to -1. Define a descriptive label2id mapping in the model config to ensure correct outputs.
+                                                             Evaluating Candidates:   0%|          | 0/10 [01:36<?, ?it/s]Evaluating Candidates:  10%|█         | 1/10 [01:36<14:25, 96.14s/it]
