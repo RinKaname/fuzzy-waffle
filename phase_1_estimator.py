@@ -19,7 +19,8 @@ def parse_policy(policy_text):
         'capability_owners': {},
         'conditionals': [],
         'compound_rules': [],
-        'fallbacks': {}
+        'fallbacks': {},
+        'precedence': {}
     }
     for line in policy_text.split('\n'):
         line = line.strip('- ').strip()
@@ -70,6 +71,16 @@ def parse_policy(policy_text):
                 if tm:
                     action = f'delegate_to_{tm.group(1).upper()}'
             policy['fallbacks'][m.group(1)] = action or 'refuse'
+
+        # Precedence
+        m = re.match(r'For (.+?), (a matching conditional clause|ordinary ownership routing) overrides', line)
+        if m:
+            cap = m.group(1).strip()
+            rule_type = m.group(2).strip()
+            if 'conditional' in rule_type:
+                policy['precedence'][cap] = 'conditional'
+            else:
+                policy['precedence'][cap] = 'ownership'
 
     return policy
 
@@ -183,20 +194,37 @@ def predict_action(probe, policy):
     if capability is None:
         return policy['fallbacks'].get(receiving, 'refuse')
 
-    # Check conditionals
+    # Determine precedence
+    prec = policy['precedence'].get(capability, 'conditional') # Default to conditional overriding if unlisted
+
+    conditional_action = None
     for rule in policy['conditionals']:
         if (rule['condition'] == condition and
             rule['capability'] == capability and
             rule['receiving_agent'] == receiving):
             action = rule['action']
             if action == '__answer_with_receiver__':
-                return f'answer_with_{receiving}'
-            return action
+                conditional_action = f'answer_with_{receiving}'
+            else:
+                conditional_action = action
+            break
 
-    # Standard routing
+    ownership_action = None
     owner = policy['capability_owners'].get(capability)
     if owner:
-        return f'answer_with_{owner}' if owner == receiving else f'delegate_to_{owner}'
+        ownership_action = f'answer_with_{owner}' if owner == receiving else f'delegate_to_{owner}'
+
+    if prec == 'conditional':
+        if conditional_action:
+            return conditional_action
+        if ownership_action:
+            return ownership_action
+    else:
+        # ownership overrides conditional
+        if ownership_action:
+            return ownership_action
+        if conditional_action:
+            return conditional_action
 
     return policy['fallbacks'].get(receiving, 'refuse')
 
